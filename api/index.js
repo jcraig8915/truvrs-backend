@@ -1,46 +1,103 @@
-
 // TRUVRS Unified API Server
 
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
+import express from 'express';
+import bodyParser from 'body-parser';
+import cors from 'cors';
+
+import { applyXP } from '../modules/xp/xp_engine.js';
+import {
+  createProposal,
+  castVote,
+  tallyVotes,
+  closeProposal
+} from '../modules/dao/voting_engine.js';
+
+import {
+  stakeTokens,
+  calculateRewards,
+  withdrawStake
+} from '../modules/token/staking_engine.js';
+
+import {
+  createUser,
+  getUser,
+  updateXP,
+  addItem
+} from '../modules/users/user_profile_engine.js';
+
+import {
+  createWallet,
+  addFunds,
+  deductFunds,
+  addItemToWallet,
+  getWallet
+} from '../modules/wallet/wallet_engine.js';
+
+import {
+  pushNotification,
+  getNotifications,
+  markAllAsRead
+} from '../modules/notifications/notification_engine.js';
+
+import {
+  createEntry,
+  getPublicEntries,
+  getMyEntries,
+  deleteEntry
+} from '../modules/vault/vault_engine.js';
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Import modules
-const { applyXP } = require('../modules/xp/xp_engine.js');
-const { createProposal, castVote, tallyVotes, closeProposal } = require('../modules/dao/voting_engine.js');
-const { stakeTokens, calculateRewards, withdrawStake } = require('../modules/token/staking_engine.js');
-const { createUser, getUser, updateXP, addItem } = require('../modules/users/user_profile_engine.js');
-const { createWallet, addFunds, deductFunds, addItemToWallet, getWallet } = require('../modules/wallet/wallet_engine.js');
-const { pushNotification, getNotifications, markAllAsRead } = require('../modules/notifications/notification_engine.js');
-
 // ----- XP Route -----
-app.post('/xp/apply', (req, res) => {
-  const { user, action } = req.body;
-  const result = applyXP(user, action);
-  res.json(result);
+app.post('/xp/apply', async (req, res) => {
+  try {
+    const { user, action } = req.body;
+    const result = await applyXP(user, action);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ----- DAO Routes -----
-app.post('/dao/proposal', (req, res) => {
-  const { title, description, createdBy, type, payload } = req.body;
-  res.json(createProposal(title, description, createdBy, type, payload));
+app.post('/dao/proposal', async (req, res) => {
+  try {
+    const { title, description, createdBy, type, payload } = req.body;
+    const result = await createProposal(title, description, createdBy, type, payload);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post('/dao/vote', (req, res) => {
-  const { proposalId, userId, voteType } = req.body;
-  res.json(castVote(proposalId, userId, voteType));
+app.post('/dao/vote', async (req, res) => {
+  try {
+    const { proposalId, userId, voteType } = req.body;
+    const result = await castVote(proposalId, userId, voteType);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
-app.get('/dao/tally/:id', (req, res) => {
-  res.json(tallyVotes(parseInt(req.params.id)));
+app.get('/dao/tally/:id', async (req, res) => {
+  try {
+    const result = await tallyVotes(req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
 });
 
-app.post('/dao/close/:id', (req, res) => {
-  res.json(closeProposal(parseInt(req.params.id)));
+app.post('/dao/close/:id', async (req, res) => {
+  try {
+    const result = await closeProposal(req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ----- Staking Routes -----
@@ -58,39 +115,79 @@ app.post('/stake/withdraw/:userId', (req, res) => {
 });
 
 // ----- User Profile Routes -----
-app.post('/user/create', (req, res) => {
-  const { userId, username } = req.body;
-  res.json(createUser(userId, username));
+app.post('/user/create', async (req, res) => {
+  try {
+    const { userId, username } = req.body;
+    const user = await createUser(userId, username);
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.get('/user/:id', (req, res) => {
-  res.json(getUser(req.params.id));
+app.get('/user/:id', async (req, res) => {
+  try {
+    const user = await getUser(req.params.id);
+    res.json(user);
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
 });
 
-app.post('/user/:id/xp', (req, res) => {
-  const { xp } = req.body;
-  res.json(updateXP(req.params.id, xp));
+app.post('/user/:id/xp', async (req, res) => {
+  try {
+    const { xp } = req.body;
+    const updated = await updateXP(req.params.id, xp);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ----- Wallet Routes -----
-app.post('/wallet/create', (req, res) => {
-  res.json(createWallet(req.body.userId));
+app.post('/wallet/create', async (req, res) => {
+  try {
+    const result = await createWallet(req.body.userId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post('/wallet/add', (req, res) => {
-  res.json(addFunds(req.body.userId, req.body.amount));
+app.post('/wallet/add', async (req, res) => {
+  try {
+    const result = await addFunds(req.body.userId, req.body.amount);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post('/wallet/deduct', (req, res) => {
-  res.json(deductFunds(req.body.userId, req.body.amount));
+app.post('/wallet/deduct', async (req, res) => {
+  try {
+    const result = await deductFunds(req.body.userId, req.body.amount);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.get('/wallet/:userId', (req, res) => {
-  res.json(getWallet(req.params.userId));
+app.get('/wallet/:userId', async (req, res) => {
+  try {
+    const result = await getWallet(req.params.userId);
+    res.json(result);
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
 });
 
-app.post('/wallet/item', (req, res) => {
-  res.json(addItemToWallet(req.body.userId, req.body.item));
+app.post('/wallet/item', async (req, res) => {
+  try {
+    const result = await addItemToWallet(req.body.userId, req.body.item);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ----- Notification Routes -----
@@ -105,6 +202,44 @@ app.get('/notify/:userId', (req, res) => {
 
 app.post('/notify/read/:userId', (req, res) => {
   res.json(markAllAsRead(req.params.userId));
+});
+
+// ----- Vault Routes -----
+app.post('/vault/create', async (req, res) => {
+  try {
+    const { userId, title, message, visibility, recipient } = req.body;
+    const result = await createEntry(userId, title, message, visibility, recipient);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/vault/public', async (req, res) => {
+  try {
+    const result = await getPublicEntries();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/vault/my/:userId', async (req, res) => {
+  try {
+    const result = await getMyEntries(req.params.userId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/vault/:entryId', async (req, res) => {
+  try {
+    const result = await deleteEntry(req.params.entryId);
+    res.json({ message: result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ----- Health Check -----
