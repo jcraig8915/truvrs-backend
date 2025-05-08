@@ -106,8 +106,14 @@ app.post('/notify/read/:userId', (req, res) => {
   res.json(markAllAsRead(req.params.userId));
 });
 
+// ----- Health Check -----
+app.get('/ping', (req, res) => {
+  res.send("TRUVRS API is alive.");
+});
+
 // ----- Server Start -----
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ TRUVRS API running on http://localhost:${PORT}`);
 });
+
