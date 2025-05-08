@@ -1,67 +1,55 @@
-// modules/vault/vault_engine.js
-// TRUVRS Vault Engine - Supabase-backed (ES Modules)
-
+// vault_engine.js
 import supabase from '../../utils/supabaseClient.js';
 
-// Create a new vault entry
+// Create a vault entry
 export async function createEntry(userId, title, message, visibility = 'private', recipient = null) {
   const { data, error } = await supabase
-    .from('vault_entries')
-    .insert([{ user_id: userId, title, message, visibility, recipient }])
-    .select()
-    .single();
+    .from('vaults')
+    .insert([
+      {
+        user_id: userId,
+        title,
+        message,
+        visibility,
+        recipient
+      }
+    ]);
 
-  if (error) {
-    console.error("Vault create error:", error.message);
-    throw new Error(`Vault create error: ${error.message}`);
-  }
-
-  return data;
+  if (error) throw new Error(error.message);
+  return data[0];
 }
 
-// Get all public vault entries
+// Get all public entries
 export async function getPublicEntries() {
   const { data, error } = await supabase
-    .from('vault_entries')
+    .from('vaults')
     .select('*')
     .eq('visibility', 'public')
-    .order('timestamp', { ascending: false });
+    .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error("Vault public fetch error:", error.message);
-    throw new Error(`Fetch public entries failed: ${error.message}`);
-  }
-
+  if (error) throw new Error(error.message);
   return data;
 }
 
-// Get all entries for a specific user
+// Get entries by user
 export async function getMyEntries(userId) {
   const { data, error } = await supabase
-    .from('vault_entries')
+    .from('vaults')
     .select('*')
     .eq('user_id', userId)
-    .order('timestamp', { ascending: false });
+    .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error("Vault user fetch error:", error.message);
-    throw new Error(`Fetch user entries failed: ${error.message}`);
-  }
-
+  if (error) throw new Error(error.message);
   return data;
 }
 
 // Delete an entry by ID
-export async function deleteEntry(entryId) {
-  const { error } = await supabase
-    .from('vault_entries')
+export async function deleteEntry(id) {
+  const { data, error } = await supabase
+    .from('vaults')
     .delete()
-    .eq('id', entryId);
+    .eq('id', id);
 
-  if (error) {
-    console.error("Vault delete error:", error.message);
-    throw new Error(`Vault delete error: ${error.message}`);
-  }
-
-  return { success: true };
+  if (error) throw new Error(error.message);
+  return data;
 }
