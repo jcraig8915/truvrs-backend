@@ -1,8 +1,7 @@
-// TRUVRS Vault Engine (Supabase-Backed)
-// Author: TRU AI
-// Version: ES Module
+// modules/vault/vault_engine.js
+// TRUVRS Vault Engine - Supabase-backed (ES Modules)
 
-import { supabase } from '../../utils/supabaseClient.js';
+import supabase from '../../utils/supabaseClient.js';
 
 // Create a new vault entry
 export async function createEntry(userId, title, message, visibility = 'private', recipient = null) {
@@ -12,11 +11,15 @@ export async function createEntry(userId, title, message, visibility = 'private'
     .select()
     .single();
 
-  if (error) throw new Error(`Vault create error: ${error.message}`);
+  if (error) {
+    console.error("Vault create error:", error.message);
+    throw new Error(`Vault create error: ${error.message}`);
+  }
+
   return data;
 }
 
-// Get all public entries
+// Get all public vault entries
 export async function getPublicEntries() {
   const { data, error } = await supabase
     .from('vault_entries')
@@ -24,19 +27,27 @@ export async function getPublicEntries() {
     .eq('visibility', 'public')
     .order('timestamp', { ascending: false });
 
-  if (error) throw new Error(`Vault fetch error: ${error.message}`);
+  if (error) {
+    console.error("Vault public fetch error:", error.message);
+    throw new Error(`Fetch public entries failed: ${error.message}`);
+  }
+
   return data;
 }
 
 // Get all entries for a specific user
-export async function getUserEntries(userId) {
+export async function getMyEntries(userId) {
   const { data, error } = await supabase
     .from('vault_entries')
     .select('*')
     .eq('user_id', userId)
     .order('timestamp', { ascending: false });
 
-  if (error) throw new Error(`Vault user fetch error: ${error.message}`);
+  if (error) {
+    console.error("Vault user fetch error:", error.message);
+    throw new Error(`Fetch user entries failed: ${error.message}`);
+  }
+
   return data;
 }
 
@@ -47,6 +58,10 @@ export async function deleteEntry(entryId) {
     .delete()
     .eq('id', entryId);
 
-  if (error) throw new Error(`Vault delete error: ${error.message}`);
+  if (error) {
+    console.error("Vault delete error:", error.message);
+    throw new Error(`Vault delete error: ${error.message}`);
+  }
+
   return { success: true };
 }
